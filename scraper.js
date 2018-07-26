@@ -26,6 +26,7 @@ let deleteFolderRecursive = function(path) {
 let options = {
   urls: ['http://shirts4mike.com/shirts.php'],
   directory: scrapeFolder,
+  ignoreErrors: false,
   sources: [
     {selector: 'ul[class="products"] li a', attr: 'href'}
   ],
@@ -42,11 +43,12 @@ const parseCsv = json => {
   }
 }
 
-const logError = (fileName, err) => {
+const logError = (errorFileName, err) => {
   const date = new Date();
-  const today = date.toJSON()
-  var stream = fs.createWriteStream(fileName, {flags:'a'});
-  stream.write(`[${today}] ${err} \n`)
+  const today = date.toJSON();
+  var stream = fs.createWriteStream(errorFileName, {flags:'a'});
+  stream.write(`[${today}] ${err} \n`);
+  console.log(`Error encountered during data retrieval:\n${err}\nError log updated at: ${errorFileName.slice(2)}`);
 }
 
 async function runScraper() {
@@ -55,7 +57,7 @@ async function runScraper() {
     let jsonShirtData = [];
     let time = new Date();
     result[0].children.forEach(child => {
-      const shirtData = {};
+      const shirtData = {};                     
       const $ = cheerio.load(child.text);
       shirtData.title = $('title').text();
       shirtData.price = $('.price').text();
@@ -70,11 +72,11 @@ async function runScraper() {
     const csvShirtData = parseCsv(jsonShirtData);
     const date = new Date();
     const today = date.toJSON().slice(0,10);
-    fs.writeFileSync(`./data/${today}.csv`, csvShirtData);
+    const successFileName = `./data/${today}.csv`;
+    fs.writeFileSync(successFileName, csvShirtData);
+    console.log(`Data successfully retrieved and written to ${successFileName.slice(1)}`);
   })
-  .catch((err) => {
-    logError('./scraper-error.log', err);
-  })
+  .catch(err => logError('./scraper-error.log', err));
 }
 
 runScraper();
